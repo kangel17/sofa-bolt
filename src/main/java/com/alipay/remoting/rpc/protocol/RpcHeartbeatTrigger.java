@@ -49,7 +49,7 @@ import io.netty.util.TimerTask;
 public class RpcHeartbeatTrigger implements HeartbeatTrigger {
     private static final Logger logger                 = BoltLoggerFactory.getLogger("RpcRemoting");
 
-    /** max trigger times */
+    /** max trigger times 最大触发次数,默认为3次 */
     public static final Integer maxCount               = ConfigManager.tcp_idle_maxtimes();
 
     private static final long   heartbeatTimeoutMillis = 1000;
@@ -65,11 +65,14 @@ public class RpcHeartbeatTrigger implements HeartbeatTrigger {
      */
     @Override
     public void heartbeatTriggered(final ChannelHandlerContext ctx) throws Exception {
+        // 获得连接心跳次数
         Integer heartbeatTimes = ctx.channel().attr(Connection.HEARTBEAT_COUNT).get();
         final Connection conn = ctx.channel().attr(Connection.CONNECTION).get();
+        // 如果心跳次数触发大于3次,则关闭连接
         if (heartbeatTimes >= maxCount) {
             try {
                 conn.close();
+                // 抛出异常
                 logger.error(
                     "Heartbeat failed for {} times, close the connection from client side: {} ",
                     heartbeatTimes, RemotingUtil.parseRemoteAddress(ctx.channel()));
@@ -115,6 +118,7 @@ public class RpcHeartbeatTrigger implements HeartbeatTrigger {
                                     response == null ? null : response.getResponseStatus(),
                                     RemotingUtil.parseRemoteAddress(ctx.channel()));
                             }
+                            // 触发次数加一
                             Integer times = ctx.channel().attr(Connection.HEARTBEAT_COUNT).get();
                             ctx.channel().attr(Connection.HEARTBEAT_COUNT).set(times + 1);
                         }
@@ -131,6 +135,7 @@ public class RpcHeartbeatTrigger implements HeartbeatTrigger {
                 logger.debug("Send heartbeat, successive count={}, Id={}, to remoteAddr={}",
                     heartbeatTimes, heartbeatId, RemotingUtil.parseRemoteAddress(ctx.channel()));
             }
+            // 异步回调结果
             ctx.writeAndFlush(heartbeat).addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
@@ -145,6 +150,7 @@ public class RpcHeartbeatTrigger implements HeartbeatTrigger {
                     }
                 }
             });
+            // TimerHolder为Netty工具类时间轮算法实现
             TimerHolder.getTimer().newTimeout(new TimerTask() {
                 @Override
                 public void run(Timeout timeout) throws Exception {

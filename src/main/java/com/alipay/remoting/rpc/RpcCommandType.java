@@ -25,8 +25,8 @@ package com.alipay.remoting.rpc;
 public class RpcCommandType {
     /** rpc response */
     public static final byte RESPONSE       = (byte) 0x00;
-    /** rpc request */
+    /** rpc request 常规的请求回复模型*/
     public static final byte REQUEST        = (byte) 0x01;
-    /** rpc oneway request */
+    /** rpc oneway request 单工，即只请求，不用回复*/
     public static final byte REQUEST_ONEWAY = (byte) 0x02;
 }
